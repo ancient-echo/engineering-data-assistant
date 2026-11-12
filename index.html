@@ -22,24 +22,21 @@ main{max-width:1100px;margin:auto;padding:22px;display:grid;grid-template-column
 160,1308
 180,1494
 200,1666
-220,1850</textarea><p class="hint">免费演示：不上传数据到服务器；本页不提供文件上传、导出PNG和变压器计算。</p><button id="run">重新计算</button><p id="error" class="error" role="alert"></p></section>
+220,1850</textarea><label for="csvFile" class="hint">导入本地两列 CSV（最多 5000 组数据）：</label><input id="csvFile" type="file" accept=".csv,text/csv,text/plain" aria-label="导入本地CSV文件" style="width:100%;padding:8px 0;margin:5px 0 12px"/><p class="hint">免费版在本地处理数据，不会上传文件；暂不提供图表导出和变压器计算。</p><button id="run">重新计算</button><p id="error" class="error" role="alert"></p></section>
 <section class="card"><h2>② 绘图和拟合结果</h2><p class="muted">普通最小二乘法 · y = ax + b</p><canvas width="960" height="650" id="plot" aria-label="数据散点图和拟合线"></canvas><div class="results" id="result"></div><p class="hint" style="margin-top:14px">这是公开演示版，不代表完整的软件功能。<a href="https://afdian.com/a/engineeringtools" target="_blank" rel="noopener">访问工程工具实验室</a>了解项目进展与后续发布信息。</p></section>
 <div class="footer">工程工具实验室 · 公开演示 · 教学与展示用途 · 计算结果需复核</div>
 </main>
+<script src="./core.js"></script>
 <script>
 'use strict';
 const byId=id=>document.getElementById(id);
 const canvas=byId('plot'),ctx=canvas.getContext('2d');
 function main(){
  try{
-  const rows=byId('dataset').value.trim().split(/\r?\n/).filter(Boolean).map(s=>s.split(',').map(v=>v.trim()));
-  if(rows.length<3||rows[0].length!==2)throw Error('请提供两列表头及至少两行数值数据。');
-  const pts=rows.slice(1).map((r,i)=>{if(r.length!==2||!r.every(v=>v!==''&&Number.isFinite(Number(v))))throw Error('第'+(i+2)+'行不是两个有效数字。');return {x:Number(r[0]),y:Number(r[1])};});
-  const n=pts.length,mx=pts.reduce((s,p)=>s+p.x,0)/n,my=pts.reduce((s,p)=>s+p.y,0)/n;
-  const sxx=pts.reduce((s,p)=>s+(p.x-mx)**2,0),sxy=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0),syy=pts.reduce((s,p)=>s+(p.y-my)**2,0);
-  if(sxx===0)throw Error('横轴不能全部相同。');
-  const a=sxy/sxx,b=my-a*mx,sse=pts.reduce((s,p)=>s+(p.y-a*p.x-b)**2,0),r2=syy===0?(sse<1e-12?1:NaN):1-sse/syy;
-  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),mX=Math.min(...xs),MX=Math.max(...xs);
+  const {labels,points:pts}=EngineeringData.parseTwoColumnCsv(byId('dataset').value);
+  const {a,b,r2}=EngineeringData.linearRegression(pts);
+  const n=pts.length,mX=Math.min(...pts.map(pt=>pt.x)),MX=Math.max(...pts.map(pt=>pt.x));
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
   ys.push(a*mX+b,a*MX+b);
   const W=canvas.width,H=canvas.height,p={l:105,r:36,t:60,b:88};
   const ex=(Math.max(...xs)-Math.min(...xs))*.09||1,ey=(Math.max(...ys)-Math.min(...ys))*.1||1;
@@ -50,11 +47,18 @@ function main(){
   ctx.strokeStyle='#243b58';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,H-p.b);ctx.lineTo(W-p.r,H-p.b);ctx.stroke();
   ctx.strokeStyle='#e17a2e';ctx.lineWidth=4;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(X(mX),Y(a*mX+b));ctx.lineTo(X(MX),Y(a*MX+b));ctx.stroke();ctx.setLineDash([]);
   for(const pt of pts){ctx.fillStyle='#1c72c9';ctx.beginPath();ctx.arc(X(pt.x),Y(pt.y),7,0,Math.PI*2);ctx.fill()}
-  ctx.fillStyle='#253a53';ctx.font='23px system-ui';ctx.textAlign='center';ctx.fillText(rows[0][0],W/2,H-20);ctx.save();ctx.translate(28,H/2);ctx.rotate(-Math.PI/2);ctx.fillText(rows[0][1],0,0);ctx.restore();
+  ctx.fillStyle='#253a53';ctx.font='23px system-ui';ctx.textAlign='center';ctx.fillText(labels[0],W/2,H-20);ctx.save();ctx.translate(28,H/2);ctx.rotate(-Math.PI/2);ctx.fillText(labels[1],0,0);ctx.restore();
   const f=x=>Number(x.toPrecision(6)).toString();
   byId('result').textContent=`数据行数：${n}   ·   拟合：y = ${f(a)}x ${b<0?'−':'+'} ${f(Math.abs(b))}   ·   R² = ${f(r2)}`;byId('error').textContent='';
  }catch(e){ctx.clearRect(0,0,canvas.width,canvas.height);byId('result').textContent='请检查输入后重新计算';byId('error').textContent=e.message;}
 }
-byId('run').addEventListener('click',main);main();
+byId('run').addEventListener('click',main);
+byId('csvFile').addEventListener('change',async e=>{
+ const f=e.target.files?.[0]; if(!f)return;
+ if(f.size>1024*1024){byId('error').textContent='文件不应超过 1 MB。';return;}
+ try{byId('dataset').value=await f.text();main();}
+ catch{byId('error').textContent='文件读取失败，请检查编码或格式。';}
+});
+main();
 </script>
 </body></html>
