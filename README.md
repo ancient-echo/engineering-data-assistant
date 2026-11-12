@@ -43,6 +43,5 @@ node --test tests/core.test.cjs
 
 **本仓库的免费基础版源码及文档采用 [MIT License](LICENSE) 发布。** 你可以在保留许可及版权声明的前提下使用、修改、分发和商业使用此免费版本。`screenshot.png`、`demo_preview.png` 等品牌/界面展示图片不属于此源码授权范围，除非得到单独许可；商品名称、Logo 和商标亦不被授予使用权。商业增强版的代码及安装包从未包含在本仓库，不受本仓库 MIT 许可约束。
 
-> 注意：此 MIT 许可证已加入拟议的 PR 分支。合并前默认分支仍为原有状态。
 
 维护者：工程工具实验室。爱发电主页：https://afdian.com/a/engineeringtools
