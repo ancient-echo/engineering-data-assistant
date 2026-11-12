@@ -1,0 +1,31 @@
+name: Free edition tests
+
+on:
+  push:
+    branches:
+      - main
+      - 'prep/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node.js regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check core.js
+          node --check tests/core.test.cjs
+      - name: Run regression tests
+        run: node --test tests/core.test.cjs
