@@ -2,6 +2,12 @@
 
 轻量级、无需服务器的工程实验数据分析工具。这里提供可以运行的免费基础版，**不包含计划单独销售的专业增强版**。
 
+## 在线试用
+
+**[点击这里直接打开免费版（GitHub Pages）](https://ancient-echo.github.io/engineering-data-assistant/)**
+
+无需安装或注册；在网页中输入两列数据即可绘图和计算。数据处理在本地浏览器完成。欢迎通过 [公开反馈 Issue #2](https://github.com/ancient-echo/engineering-data-assistant/issues/2) 报告可复现的问题或提出功能建议。
+
 ## 功能
 
 - 输入或本地导入两列简单 CSV 数据（首行表头，至少两组数据，最多 5000 组）。
