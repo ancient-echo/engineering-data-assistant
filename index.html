@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>工程数据助手 · 免费演示</title>
+<style>
+:root{--bg:#f2f6fb;--ink:#1b2940;--muted:#60718a;--stroke:#d6e1ed;--accent:#2066c3}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif;background:var(--bg)}
+header{background:linear-gradient(118deg,#112f53,#1761ac);color:white;padding:42px max(22px,calc((100vw - 1040px)/2))}h1{font-size:31px;letter-spacing:.01em;margin:4px 0 6px}header p{color:#dcecff;margin:0}.label{font-size:12px;color:#a8d9ff;letter-spacing:.15em;font-weight:700}
+main{max-width:1100px;margin:auto;padding:22px;display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px}.card{background:white;border:1px solid var(--stroke);border-radius:15px;padding:21px;box-shadow:0 6px 20px #24456c0a}h2{font-size:19px;margin:0 0 9px}p{margin:0 0 15px}.muted,small{color:var(--muted)}textarea{width:100%;min-height:250px;border:1px solid var(--stroke);border-radius:10px;padding:12px;font:13px/1.7 Consolas,"Microsoft YaHei",monospace;resize:vertical}.hint{font-size:12px;color:var(--muted)}button{background:var(--accent);color:white;padding:10px 16px;border:0;border-radius:8px;font:600 14px system-ui;cursor:pointer}button:hover{background:#174f9d}.results{background:#f1f7ff;border:1px solid #dce8fa;border-radius:9px;padding:13px 15px;min-height:70px;margin-top:12px}.error{color:#b52f3a}canvas{width:100%;display:block;max-width:100%;border:1px solid #e1e8ef;border-radius:9px}.footer{grid-column:1/-1;text-align:center;font-size:12px;color:var(--muted)}a{color:var(--accent)}@media(max-width:820px){main{grid-template-columns:1fr}header{padding:30px 20px}}
+</style>
+</head>
+<body>
+<header><div class="label">ENGINEERING DATA ASSISTANT · PUBLIC DEMO</div><h1>工程数据助手 · 免费演示</h1><p>一个本地运行的工程实验数据工具。当前演示仅包含简单的二维数据线性拟合。</p></header>
+<main>
+<section class="card"><h2>① 输入两列数值</h2><p class="muted">首行是表头，每行一组数值，以英文逗号分隔。示例是虚构数据，仅用于展示。</p><textarea id="dataset" spellcheck="false" aria-label="CSV 演示数据">电枢电压_V,转速_rpm
+80,618
+100,795
+120,966
+140,1140
+160,1308
+180,1494
+200,1666
+220,1850</textarea><p class="hint">免费演示：不上传数据到服务器；本页不提供文件上传、导出PNG和变压器计算。</p><button id="run">重新计算</button><p id="error" class="error" role="alert"></p></section>
+<section class="card"><h2>② 绘图和拟合结果</h2><p class="muted">普通最小二乘法 · y = ax + b</p><canvas width="960" height="650" id="plot" aria-label="数据散点图和拟合线"></canvas><div class="results" id="result"></div><p class="hint" style="margin-top:14px">这是公开演示版，不代表完整的软件功能。<a href="https://afdian.com/a/engineeringtools" target="_blank" rel="noopener">访问工程工具实验室</a>了解项目进展与后续发布信息。</p></section>
+<div class="footer">工程工具实验室 · 公开演示 · 教学与展示用途 · 计算结果需复核</div>
+</main>
+<script>
+'use strict';
+const byId=id=>document.getElementById(id);
+const canvas=byId('plot'),ctx=canvas.getContext('2d');
+function main(){
+ try{
+  const rows=byId('dataset').value.trim().split(/\r?\n/).filter(Boolean).map(s=>s.split(',').map(v=>v.trim()));
+  if(rows.length<3||rows[0].length!==2)throw Error('请提供两列表头及至少两行数值数据。');
+  const pts=rows.slice(1).map((r,i)=>{if(r.length!==2||!r.every(v=>v!==''&&Number.isFinite(Number(v))))throw Error('第'+(i+2)+'行不是两个有效数字。');return {x:Number(r[0]),y:Number(r[1])};});
+  const n=pts.length,mx=pts.reduce((s,p)=>s+p.x,0)/n,my=pts.reduce((s,p)=>s+p.y,0)/n;
+  const sxx=pts.reduce((s,p)=>s+(p.x-mx)**2,0),sxy=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0),syy=pts.reduce((s,p)=>s+(p.y-my)**2,0);
+  if(sxx===0)throw Error('横轴不能全部相同。');
+  const a=sxy/sxx,b=my-a*mx,sse=pts.reduce((s,p)=>s+(p.y-a*p.x-b)**2,0),r2=syy===0?(sse<1e-12?1:NaN):1-sse/syy;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),mX=Math.min(...xs),MX=Math.max(...xs);
+  ys.push(a*mX+b,a*MX+b);
+  const W=canvas.width,H=canvas.height,p={l:105,r:36,t:60,b:88};
+  const ex=(Math.max(...xs)-Math.min(...xs))*.09||1,ey=(Math.max(...ys)-Math.min(...ys))*.1||1;
+  const xmin=Math.min(...xs)-ex,xmax=Math.max(...xs)+ex,ymin=Math.min(...ys)-ey,ymax=Math.max(...ys)+ey;
+  const X=x=>p.l+(x-xmin)/(xmax-xmin)*(W-p.l-p.r),Y=y=>H-p.b-(y-ymin)/(ymax-ymin)*(H-p.t-p.b);
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='white';ctx.fillRect(0,0,W,H);ctx.fillStyle='#59708b';ctx.font='20px system-ui';ctx.textAlign='center';
+  for(let i=0;i<=5;i++){const x=xmin+(xmax-xmin)*i/5,y=ymin+(ymax-ymin)*i/5;ctx.strokeStyle='#e3e9f2';ctx.beginPath();ctx.moveTo(X(x),p.t);ctx.lineTo(X(x),H-p.b);ctx.moveTo(p.l,Y(y));ctx.lineTo(W-p.r,Y(y));ctx.stroke();ctx.fillText(Number(x.toPrecision(4)).toString(),X(x),H-p.b+34);ctx.textAlign='right';ctx.fillText(Number(y.toPrecision(4)).toString(),p.l-11,Y(y)+7);ctx.textAlign='center'}
+  ctx.strokeStyle='#243b58';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,H-p.b);ctx.lineTo(W-p.r,H-p.b);ctx.stroke();
+  ctx.strokeStyle='#e17a2e';ctx.lineWidth=4;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(X(mX),Y(a*mX+b));ctx.lineTo(X(MX),Y(a*MX+b));ctx.stroke();ctx.setLineDash([]);
+  for(const pt of pts){ctx.fillStyle='#1c72c9';ctx.beginPath();ctx.arc(X(pt.x),Y(pt.y),7,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='#253a53';ctx.font='23px system-ui';ctx.textAlign='center';ctx.fillText(rows[0][0],W/2,H-20);ctx.save();ctx.translate(28,H/2);ctx.rotate(-Math.PI/2);ctx.fillText(rows[0][1],0,0);ctx.restore();
+  const f=x=>Number(x.toPrecision(6)).toString();
+  byId('result').textContent=`数据行数：${n}   ·   拟合：y = ${f(a)}x ${b<0?'−':'+'} ${f(Math.abs(b))}   ·   R² = ${f(r2)}`;byId('error').textContent='';
+ }catch(e){ctx.clearRect(0,0,canvas.width,canvas.height);byId('result').textContent='请检查输入后重新计算';byId('error').textContent=e.message;}
+}
+byId('run').addEventListener('click',main);main();
+</script>
+</body></html>
